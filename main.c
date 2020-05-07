@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 	char *pText = (char *) 0;
 	if (argc < 2)				// check if text is provided
 	{
-		printf("NOt enought arguments");
+		printf("Not enought arguments");
 		return -1;
 	}
 	
@@ -39,36 +39,38 @@ int main(int argc, char *argv[])
     }
 
 	/*
-	FILE *inputImage;
-	unsigned char *inputImageArray;
+    FILE *inputFile, *inputFile2;
+    inputFile=fopen(pText,"r");
+	if(!inputFile)
+	{
+		fprintf( stderr, "Cannot open file!\n" );
+        return - 1;
+	}
+    int BM, size, offset;
+    fread(&BM,2,1,inputFile);
+    fread(&size,4,1,inputFile);
+    fread(&offset,4,1,inputFile);
+    fread(&offset,4,1,inputFile);
+    fclose(inputFile);
 
+	printf("%d\n", offset);
 
-	if ((inputImage = fopen(argv[1], "r+")) == NULL)
-    {
-        printf ("Cannot open file %s \n", argv[1]);
-    }
-	else
-        {
-
-            fseek(inputImage, 0, SEEK_END);
-            int fileLength = ftell(inputImage);
-            rewind(inputImage);
-
-            inputImageArray = (unsigned char *)malloc((fileLength+1)*sizeof(unsigned char));
-            fread(inputImageArray, fileLength, 1, inputImage);
-
-			long offset = inputImageArray[10]<<3 + inputImageArray[11]<<2 + inputImageArray[12]<<1 + inputImageArray[13];
-			long offset1 = inputImageArray[10] + inputImageArray[11]<<1 + inputImageArray[12]<<2 + inputImageArray[13]<<3;
-
-			printf("%ld\n%d\n", offset, offset1);
-		}
+	unsigned char * header = malloc(offset + 1);
+	unsigned char * table = malloc(size - offset + 1);
+	
+	
+	inputFile2=fopen(pText,"r");
+	if(!inputFile2)
+	{
+		fprintf( stderr, "Cannot open file!\n" );
+        return - 1;
+	}
+	fread(&header,1, 10,inputFile2);
+	//fread(&table, 1, size-offset, inputFile);
+	fclose(inputFile);
+	
 	*/
 	
-
-
-
-
-
 	al_init_image_addon();
 
 	//al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_SINGLE_CHANNEL_8);
@@ -86,7 +88,7 @@ int main(int argc, char *argv[])
 	display1 = al_create_display(WINDOW_WIDTH, WINDOW_HEIGHT);
 	al_draw_bitmap(bitmap, 0, 0, 0);
 	al_flip_display();
-	al_set_window_title(display1, "in");
+	//al_set_window_title(display1, "in");
 	if(!display1)
 	{
         printf("Error with display\n");
@@ -103,7 +105,19 @@ int main(int argc, char *argv[])
 	int width = al_get_bitmap_width(bitmap);
 	int height = al_get_bitmap_height(bitmap);
 
+	/*
+	for(int i = 0; i < height; ++i)
+	{
+		for( int j = 0; j < width; ++j )
+		{
+			printf("%d ",table[i*width + j]);
+		}
+		printf("\n");
+	}
+	*/
+
 	unsigned char * table = malloc(sizeof(unsigned char) * al_get_bitmap_width(bitmap) * al_get_bitmap_height(bitmap) + 1);
+	unsigned char * table2 = malloc(sizeof(unsigned char) * al_get_bitmap_width(bitmap) * al_get_bitmap_height(bitmap)*10 + 1);
 	table[al_get_bitmap_width(bitmap) * al_get_bitmap_height(bitmap)] = '\0';
 
 	ALLEGRO_LOCKED_REGION *lr = al_lock_bitmap(bitmap, ALLEGRO_PIXEL_FORMAT_SINGLE_CHANNEL_8, ALLEGRO_LOCK_READWRITE);
@@ -113,7 +127,7 @@ int main(int argc, char *argv[])
 		for (int j = 0; j < al_get_bitmap_width(bitmap);j++)
 		{
 			unsigned char pixel = *(ptr+0);
-			//printf("%d ", pixel);
+			printf("%d ", pixel);
 			ptr += 1;
 			table[i * al_get_bitmap_width(bitmap) + j] = pixel;
 		}
@@ -121,16 +135,74 @@ int main(int argc, char *argv[])
  	}
 
 	al_unlock_bitmap(bitmap);
+
+	printf("\n");
+	
 	//al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_RGB_888);
 	
 	//al_draw_bitmap(bitmap, 0, 0, 0);
 	//al_flip_display();
+	unsigned char* tab25 = malloc(25);
 
-	x86_function(table, width, height);			// call assembler procedure
+	for( int i = 0; i < 5; ++i )
+		{
+			for( int j = 0; j < 5; ++j )
+			{
+				tab25[5*i+j]=11;
+			}
+		}
 
+
+	x86_function(table, width, height, tab25, table2);			// call assembler procedure
+
+	printf("\n");
+
+	for( int i = 0; i < 5; ++i )
+		{
+			for( int j = 0; j < 5; ++j )
+			{
+				printf("%d ", tab25[5*i+j]);
+			}
+			printf("\n");
+		}
+	
+	printf("\n");
+	for(int i = 0; i < height; ++i)
+	{
+		for( int j = 0; j < width; ++j )
+		{
+			printf("%d ",table[i*width + j]);
+		}
+		printf("\n");
+	}
+	printf("\n");
+	
+	ALLEGRO_LOCKED_REGION *lr2 = al_lock_bitmap(bitmap, ALLEGRO_PIXEL_FORMAT_SINGLE_CHANNEL_8, ALLEGRO_LOCK_READWRITE);
+	for (int i = 0; i < al_get_bitmap_height(bitmap); i++)
+	{
+		uint8_t *ptr = (uint8_t *)lr->data + i * lr->pitch;
+		for (int j = 0; j < al_get_bitmap_width(bitmap);j++)
+		{
+			*(ptr+0) = table2[i * al_get_bitmap_width(bitmap) + j];
+			printf("%d ", table2[i * al_get_bitmap_width(bitmap) + j]);
+			ptr += 1;
+		}
+		printf("\n");
+ 	}
+
+	al_unlock_bitmap(bitmap);
+
+	
 	al_draw_bitmap(bitmap, al_get_bitmap_width(bitmap), 0, 0);
 	al_flip_display();
 	
+	if(!al_save_bitmap("out.bmp", bitmap))
+	{
+		printf("Error with saving bitmap\n");
+		exit(-1);
+	}
+
+	/*
 	while(true)
 	;
 	if(!al_save_bitmap("out.bmp", bitmap))
@@ -144,6 +216,7 @@ int main(int argc, char *argv[])
         printf("Error with display\n");
 		exit(-1);
     }
+	*/
 	
 	/*
 	al_register_event_source(event_queue, al_get_display_event_source(display1));
