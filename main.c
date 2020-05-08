@@ -6,7 +6,7 @@
 #include <allegro5/allegro_native_dialog.h> 
 
 
-#include "x86_function.h" 	// quotation include looks for 'x86_function.h' ONLY in the  
+#include "filter.h" 	// quotation include looks for 'x86_function.h' ONLY in the  
 				//	working directory and relative 
 				//	directories (for example "../another_file.h")
 
