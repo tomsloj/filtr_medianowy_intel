@@ -1,33 +1,26 @@
     section .text
 
-    global x86_function
+    global filter
 
-section .data
-    width DD 0
-    height DD 0
-    index DW 0
-    currentPixelX DW -1
-    currentPixely DW -1
-    zero DB 0
-
-
-    msg db  'Hello, world!',0xa ;our dear string
-    len equ $ - msg         ;length of our dear string
-
-section .text
-
-; linker puts the entry point here:
-x86_function:
+filter:
     push  rbp
     mov rbp,  rsp
 
-    ;mov [width], rsi
-    ;mov [height], rdx
-    ;mov rdx, [rbp+8] ;poczatek tablicy
-    ;mov [rdi], dx
-    ;add [rdi], [width]
-
     mov rbx, r8
+
+    ;rdi --- wskaznik do poczatku tablicy pixeli
+    ;rsi --- szerokosc bitmapy
+    ;rdx --- wysokosc bitmapy
+    ;rcx --- wskaznik do poczatku 25 elementowej tablicy
+    ;rbx --- tablica w ktorej przechowywane sa pixele po filtracji
+
+    ;r8 --- X aktualnie rozwazanego pixela
+    ;r9 --- Y aktualnie rozwazanego pixela
+    ;r10 --- licznik iteracji w jednym wierszu
+	;r11 --- licznik iteracji wierszy
+    ;r12 --- numer wiersza (w iteracji)
+	;r13 --- numer kolumny (w iteracji)
+    ;r14 --- liczba pixeli juz wlozonych do tablicy 5x5
 
     ;wyzerowanie iteratorow
     xor r8, r8
@@ -35,22 +28,22 @@ x86_function:
     xor r10, r10
     xor r11, r11
 
-analizePixel:
 
-    xor r14, r14
-    mov r12, r8
+analizePixel:
+    xor r14, r14 ; r14 = 0
+    ;r12 = r8 - 2
+    mov r12, r8 
     dec r12
     dec r12
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;mov [rdi], r12b
+    ;r13 = r9 - 2
     mov r13, r9
     dec r13
     dec r13
-    xor r10, r10
-    xor r11, r11
-
-
+    xor r10, r10 ;r10 = 0
+    xor r11, r11 ; r11 = 0
 
 loopNr1:
+    ;sprawdzamy czy rozwazany pixel miesci sie w bitmapie
     cmp r12, 0
     jl nextPixel
     cmp r13, 0
@@ -61,27 +54,20 @@ loopNr1:
     jge nextPixel
 
     ;liczymy numer indexu w tablicy pixeli
+    ;rax = r12 * rsi + r13 <=> rax = x * szerokosc + y
     mov rax, r12
     imul rax, rsi
     add rax, r13 
     
-    push r9 ; potrzebuje rejestr
-    mov r9, [rdi+rax];w rbx wartosc pixela
-    mov [rcx+r14], r9b;
+    push r9 ; zwaliniam na chwile rejestr
+    mov r9, [rdi+rax];w r9 wartosc pixela z pod indexu rax
+    mov [rcx+r14], r9b; zapisujemy ten pixel do tablicy 5x5
     pop r9 ; sciagam wczesniej wstawiona wartosc ze stosu
 
-    inc r14
+    inc r14; zwiekszamy licznik ilosci pixeli w tablicy 5x5
     jmp nextPixel
 
 sort:
-    ;mov rax, r8
-    ;imul rax, rsi
-    ;add rax, r9
-    ;cmp rax, 36
-    ;je end
-    ;mov [rbx+rax], r14
-
-
     mov r12, r14 ; r12 - licznik zewnetrznej petli
                  ; r13 - licznik wewnetrznej petli
 sortLoop1:
@@ -95,35 +81,14 @@ sortLoop2:
     mov r11, [rcx+r13]
     dec r13
 
-    ;mov rax, r8
-    ;imul rax, rsi
-    ;add rax, r9
-    ;cmp rax, 36
-    ;jne jump
-
-    ;mov [rbx], r10b
-    ;inc rbx
-    ;mov [rbx], r11b
-    ;inc rbx
-
-    ;cmp r12, r14
-    ;jne end
-    ;jmp end
-jump:
-
-    cmp r10b, r11b
+    cmp r10b, r11b; jesli r10 <= r11 to nic nie zmieniamy
     jle afterSwap
-swap:
+swap: ; zamieniamy dwa sasiednie elementy tablicy
     mov [rcx+r13], r11b
     inc r13
     mov [rcx+r13], r10b
     dec r13
 
-    ;mov rax, r8
-    ;imul rax, rsi
-    ;add rax, r9
-    ;cmp rax, 36
-    ;je end
 afterSwap:
     inc r13
     inc r13
@@ -132,10 +97,9 @@ afterSwap:
 ; END sortLoop2
     dec r12
     cmp r12, 0
-    jg sortLoop1
+    jg sortLoop1 ; while r12 > 1
 ; END sortLoop1
     xor r12, r12
-
 
 endSort:
     mov r12, r14
@@ -146,22 +110,13 @@ endSort:
     mov rax, r8
     imul rax, rsi
     add rax, r9 ; indeks analizowanego pixela
-
-    ;inc rax
-    ;mov [rdi], rax
-    ;jmp end
-
+    ;rax = r12 * rsi + r13 <=> rax = x * szerokosc + y
 
     mov [rbx+rax], r13b; wrzucamy mediane do drugiej tablicy na swoje miejsce
-    
-    ;jmp end
-    ;cmp rax, 36
-    ;je end
 
     inc r9
-    cmp r9, rsi;;;;;;;;;;;;;;;;;;;;;;;;;;
+    cmp r9, rsi
     jl analizePixel
-    ;jmp end
 
     ;doszlismy do konca wiersza
     xor r9, r9
@@ -169,8 +124,7 @@ endSort:
     cmp r8, rdx
     jl analizePixel
 
-
-    jmp swapPixels
+    jmp end
 
 
 nextPixel:
@@ -189,18 +143,9 @@ nextPixel:
     jne loopNr1
 
     jmp sort
-    
 
-
-
-
-swapPixels:
-
-    
 end:
 
-;------------------------------------------------------------------------------
-
-	mov rsp, rbp	; restore original stack pointer
-	pop rbp		; restore "calling procedure" frame pointer
+	mov rsp, rbp	; przywróć oryginalny stack pointer
+	pop rbp		; przywróć wskaźnik ramki stosu
 	ret
