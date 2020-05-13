@@ -41,7 +41,7 @@ analizePixel:
     dec r13
     xor r10, r10 ;r10 = 0
     xor r11, r11 ; r11 = 0
-
+    
 loopNr1:
     ;sprawdzamy czy rozwazany pixel miesci sie w bitmapie
     cmp r12, 0
@@ -65,7 +65,21 @@ loopNr1:
     pop r9 ; sciagam wczesniej wstawiona wartosc ze stosu
 
     inc r14; zwiekszamy licznik ilosci pixeli w tablicy 5x5
-    jmp nextPixel
+
+nextPixel:
+    inc r10
+    inc r13
+    cmp r10, 5
+    jne loopNr1
+    xor r10, r10
+    mov r13, r9
+    dec r13
+    dec r13
+    inc r12
+    inc r11
+    
+    cmp r11, 5
+    jne loopNr1
 
 sort:
     mov r12, r14 ; r12 - licznik zewnetrznej petli
@@ -96,7 +110,6 @@ afterSwap:
     jl sortLoop2 ; while r13 < r12 - 1
 ; END sortLoop2
     dec r12
-    cmp r12, 0
     jg sortLoop1 ; while r12 > 1
 ; END sortLoop1
     xor r12, r12
@@ -123,26 +136,6 @@ endSort:
     inc r8
     cmp r8, rdx
     jl analizePixel
-
-    jmp end
-
-
-nextPixel:
-    inc r10
-    inc r13
-    cmp r10, 5
-    jne loopNr1
-    xor r10, r10
-    mov r13, r9
-    dec r13
-    dec r13
-    inc r12
-    inc r11
-    
-    cmp r11, 5
-    jne loopNr1
-
-    jmp sort
 
 end:
 
